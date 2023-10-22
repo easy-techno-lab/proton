@@ -1,0 +1,50 @@
+# coder
+
+### The `coder` package implements three interfaces with debug [logging](https://github.com/easy-techno-lab/proton/blob/main/logger/README.md):
+
+- *Encoder* encodes and writes values to an output stream.
+- *Decoder* reads and decodes values from an input stream.
+- *Coder* is a pair of Encoder and Decoder.
+
+## Getting Started
+
+```go
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+
+	"github.com/easy-techno-lab/proton/coder"
+)
+
+func main() {
+	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
+
+	var buf bytes.Buffer
+
+	in := &struct {
+		A string `json:"a"`
+	}{A: "AAA"}
+
+	if err := cdrJSON.Encode(&buf, in); err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("encoded: %s\n", buf.String())
+	// encoded: {"a":"AAA"}
+
+	out := &struct {
+		A string `json:"a"`
+	}{}
+
+	if err := cdrJSON.Decode(&buf, out); err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("decoded: %+v\n", out)
+	// decoded: &{A:AAA}
+}
+
+```

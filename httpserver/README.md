@@ -1,0 +1,134 @@
+# httpserver
+
+### The `httpserver` package implements the core functionality of a [coder](https://github.com/easy-techno-lab/proton/blob/main/coder/README.md)-based http server.
+
+## Getting Started
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/easy-techno-lab/proton/coder"
+	"github.com/easy-techno-lab/proton/httpserver"
+)
+
+func main() {
+	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
+
+	fmtJSON := httpserver.NewFormatter(cdrJSON)
+
+	handlerFunc := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			req := &struct {
+				// some fields
+			}{}
+
+			if err := fmtJSON.Decode(r.Body, req); err != nil {
+				panic(err)
+			}
+		}
+
+		res := &struct {
+			ID int `json:"id"`
+		}{ID: 1}
+
+		fmtJSON.WriteResponse(w, http.StatusOK, res)
+	})
+
+	http.Handle("/example/", handlerFunc)
+
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		panic(err)
+	}
+}
+
+```
+
+### For all responses with a body:
+
+- The default is to use the `Content-Type` set in
+  the [coder](https://github.com/easy-techno-lab/proton/blob/main/coder/README.md).
+- If you don't set the `Content-Type` in the [coder](https://github.com/easy-techno-lab/proton/blob/main/coder/README.md), it
+  will be set automatically by the [net/http](https://pkg.go.dev/net/http) package.
+- If you need to set a different `Content-Type` you must set it before calling `WriteResponse`.
+
+### For all responses without a body:
+
+- `Content-Type` will not be set by default.
+- If you need to set `Content-Type` you must set it before calling `WriteResponse`.
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/easy-techno-lab/proton/httpserver"
+)
+
+func main() {
+	handlerFunc := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprint(w, "Hello!")
+	})
+
+	handler := http.NewServeMux()
+	handler.HandleFunc("/example/", handlerFunc)
+
+	srv := new(http.Server)
+	srv.Addr = ":8080"
+	srv.Handler = handler
+
+	hcr := new(httpserver.Controller)
+	hcr.Server = srv
+	hcr.GracefulTimeout = time.Second * 10
+
+	if err := hcr.Start(); err != nil {
+		panic(err)
+	}
+}
+
+```
+
+### The `httpserver` package contains functions that are used as middleware on the http server side.
+
+## Getting Started
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/easy-techno-lab/proton/httpserver"
+	"github.com/easy-techno-lab/proton/logger"
+)
+
+func main() {
+	handlerFunc := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := fmt.Fprintln(w, "Hello World!"); err != nil {
+			panic(err)
+		}
+	})
+
+	http.Handle("/example/", handlerFunc)
+
+	handler := httpserver.MiddlewareSequencer(
+		http.DefaultServeMux,
+		httpserver.DumpHttp(logger.LevelTrace),
+		httpserver.Timer(logger.LevelInfo),
+		httpserver.PanicCatcher,
+	)
+
+	if err := http.ListenAndServe(":8080", handler); err != nil {
+		panic(err)
+	}
+}
+
+```
