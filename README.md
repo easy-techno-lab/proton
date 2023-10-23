@@ -17,12 +17,12 @@
 `proton` can be installed like any other Go library through `go get`:
 
 ```console
-$ go get github.com/easy-techno-lab/proton
+go get github.com/easy-techno-lab/proton
 ```
 
 Or, if you are already using
 [Go Modules](https://github.com/golang/go/wiki/Modules), you may specify a version number as well:
 
 ```console
-$ go get github.com/easy-techno-lab/proton@latest
+go get github.com/easy-techno-lab/proton@latest
 ```
