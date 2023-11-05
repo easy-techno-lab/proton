@@ -15,6 +15,7 @@ var (
 	CertPEMBlockIsEmpty = errors.New("PEM certificate block is empty")
 	KeyPEMBlockIsEmpty  = errors.New("PEM key block is empty")
 	NoValid             = errors.New("no valid certificate")
+	AppendCertFailed    = errors.New("failed to add CA's certificate")
 )
 
 type CertificatesLoader func() ([]tls.Certificate, *x509.CertPool, error)
