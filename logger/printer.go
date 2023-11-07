@@ -105,7 +105,7 @@ func (p *printer) text(msg string) {
 	}
 
 	p.buf = enc.value(p.buf, msg)
-	p.buf = enc.value(enc.lineFeed(p.buf), "\x1b[0m")
+	p.buf = enc.lineFeed(enc.value(p.buf, "\x1b[0m"))
 }
 
 func (p *printer) json(msg string) {

@@ -67,6 +67,8 @@ func DumpHttp(logLevel logger.Level) func(http.Handler) http.Handler {
 					}
 				}
 
+				w.WriteHeader(recorder.Code)
+
 				_, _ = recorder.Body.WriteTo(io.MultiWriter(w, buf))
 				recorder.Body = buf
 
