@@ -37,7 +37,7 @@ func putPrinter(p *printer) {
 func (l *logger) newPrinter(lvl Level) *printer {
 	p := printerPool.Get().(*printer)
 
-	p.buf = p.buf[:0]
+	p.buf = enc.color(p.buf[:0], lvl)
 	p.level = lvl
 
 	l.mu.RLock()
@@ -76,17 +76,16 @@ func (p *printer) mid(msg string) {
 	}
 
 	if p.out != nil {
-		_, _ = p.out.Write(p.buf)
+		_, _ = p.out.Write(enc.lineFeed(p.buf[5:]))
 	}
 
+	p.buf = enc.lineFeed(enc.value(p.buf, "\x1b[0m"))
 	_, _ = os.Stderr.Write(p.buf)
 
 	putPrinter(p)
 }
 
 func (p *printer) text(msg string) {
-	p.buf = enc.color(p.buf, p.level)
-
 	if p.timeFormat != "" {
 		p.buf = enc.space(enc.time(p.buf, p.timeFormat))
 	}
@@ -105,12 +104,9 @@ func (p *printer) text(msg string) {
 	}
 
 	p.buf = enc.value(p.buf, msg)
-	p.buf = enc.lineFeed(enc.value(p.buf, "\x1b[0m"))
 }
 
 func (p *printer) json(msg string) {
-	//p.buf = enc.addColor(p.buf, p.level)
-
 	p.buf = enc.startMarker(p.buf)
 
 	if p.timeFormat != "" {
@@ -133,9 +129,6 @@ func (p *printer) json(msg string) {
 
 	p.buf = enc.string(enc.key(p.buf, nm), msg)
 	p.buf = enc.endMarker(p.buf)
-	p.buf = enc.lineFeed(p.buf)
-
-	//p.buf = enc.addString(p.buf, "}\n\x1b[0m")
 }
 
 const (

@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 )
 
+const maxBody = 1 << 14 // 16KiB
+
 // SetTimeFormat sets the logger time format.
 func SetTimeFormat(format string) {
 	std.setTimeFormat(format)
@@ -93,7 +95,11 @@ func DumpHttpRequest(r *http.Request, logLevel Level) {
 	if r.URL.Scheme == "" || r.URL.Host == "" {
 		dumpFunc = httputil.DumpRequest
 	}
-	b, err := dumpFunc(r, true)
+	body := true
+	if r.ContentLength > maxBody {
+		body = false
+	}
+	b, err := dumpFunc(r, body)
 	if err != nil {
 		std.error("REQUEST LOG error: ", err)
 		return
@@ -103,7 +109,11 @@ func DumpHttpRequest(r *http.Request, logLevel Level) {
 
 // DumpHttpResponse dumps the HTTP response and prints out with logFunc.
 func DumpHttpResponse(r *http.Response, logLevel Level) {
-	b, err := httputil.DumpResponse(r, true)
+	body := true
+	if r.ContentLength > maxBody {
+		body = false
+	}
+	b, err := httputil.DumpResponse(r, body)
 	if err != nil {
 		std.error("RESPONSE LOG error: ", err)
 		return

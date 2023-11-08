@@ -1,8 +1,6 @@
 package httpserver
 
 import (
-	"bytes"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"runtime/debug"
@@ -55,7 +53,6 @@ func DumpHttp(logLevel logger.Level) func(http.Handler) http.Handler {
 			if logger.InLevel(logLevel) {
 				logger.DumpHttpRequest(r, logLevel)
 
-				buf := new(bytes.Buffer)
 				recorder := httptest.NewRecorder()
 
 				next.ServeHTTP(recorder, r)
@@ -69,10 +66,10 @@ func DumpHttp(logLevel logger.Level) func(http.Handler) http.Handler {
 
 				w.WriteHeader(recorder.Code)
 
-				_, _ = recorder.Body.WriteTo(io.MultiWriter(w, buf))
-				recorder.Body = buf
+				response := recorder.Result()
+				response.ContentLength, _ = recorder.Body.WriteTo(w)
 
-				logger.DumpHttpResponse(recorder.Result(), logLevel)
+				logger.DumpHttpResponse(response, logLevel)
 
 				return
 			}
