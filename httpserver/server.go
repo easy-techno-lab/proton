@@ -109,8 +109,6 @@ func (c *Controller) Shutdown() {
 }
 
 func (c *Controller) start() error {
-	idle := make(chan struct{})
-
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM)
 
@@ -125,7 +123,6 @@ func (c *Controller) start() error {
 		<-sigint
 
 		c.Shutdown()
-		close(idle)
 	}()
 
 	c.isRan.Store(true)
