@@ -56,17 +56,19 @@ type Controller struct {
 
 	isRan   atomic.Bool
 	restart atomic.Bool
+
+	sigint chan os.Signal
 }
 
 // Start starts the *http.Server.
 // If *tls.Config on the server is non nil, the server listens and serves using tls.
-func (c *Controller) Start() error {
+func (c *Controller) Start() (err error) {
 	for {
-		if err := c.start(); !c.restart.Load() {
-			if errors.Is(err, http.ErrServerClosed) {
-				return nil
-			}
-			return err
+		if err = c.start(); errors.Is(err, http.ErrServerClosed) {
+			err = nil
+		}
+		if !c.restart.Load() {
+			return
 		} else if err != nil {
 			logger.Error(err)
 		}
@@ -93,9 +95,7 @@ func (c *Controller) Restart() {
 
 	c.restart.Store(true)
 
-	if err := syscall.Kill(syscall.Getpid(), syscall.SIGINT); err != nil {
-		logger.Error("Send stop signal: ", err)
-	}
+	c.sigint <- syscall.SIGINT
 }
 
 // Shutdown gracefully shuts down the server.
@@ -109,20 +109,20 @@ func (c *Controller) Shutdown() {
 }
 
 func (c *Controller) start() error {
-	sigint := make(chan os.Signal, 1)
-	signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM)
+	c.sigint = make(chan os.Signal, 1)
+	signal.Notify(c.sigint, syscall.SIGINT, syscall.SIGTERM)
 
 	defer func() {
-		signal.Stop(sigint)
-		close(sigint)
+		signal.Stop(c.sigint)
+		close(c.sigint)
 	}()
 
 	go func() {
-		defer logger.Info("Server is shutdown")
-
-		<-sigint
+		<-c.sigint
 
 		c.Shutdown()
+
+		logger.Info("Server is shutdown")
 	}()
 
 	c.isRan.Store(true)
