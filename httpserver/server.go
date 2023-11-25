@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -32,18 +31,19 @@ type protoFormatter struct {
 
 // WriteResponse encodes the value pointed to by v and writes it and statusCode to the stream.
 func (f *protoFormatter) WriteResponse(w http.ResponseWriter, statusCode int, v any) {
-	if v != nil {
-		if w.Header().Get(coder.ContentType) == "" && f.ContentType() != "" {
-			w.Header().Set(coder.ContentType, f.ContentType())
-		}
+	if v == nil {
 		w.WriteHeader(statusCode)
-		if err := f.Encode(w, v); err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			logger.Error("Can't encode response: ", err)
-		}
 		return
 	}
+
+	if w.Header().Get(coder.ContentType) == "" && f.ContentType() != "" {
+		w.Header().Set(coder.ContentType, f.ContentType())
+	}
 	w.WriteHeader(statusCode)
+	if err := f.Encode(w, v); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		logger.Error("Can't encode response: ", err)
+	}
 }
 
 // Controller is a wrapper around *http.Server to control the server.
@@ -143,17 +143,15 @@ func (c *Controller) start() error {
 
 // clone clones the server before restarting, since it is impossible to start a stopped server.
 func (c *Controller) clone() {
-	var tlsConfig *tls.Config
-
-	if c.Server.TLSConfig != nil && len(c.Server.TLSConfig.Certificates) != 0 {
-		tlsConfig = c.Server.TLSConfig.Clone()
+	if c.Server.TLSConfig != nil && len(c.Server.TLSConfig.Certificates) == 0 {
+		c.Server.TLSConfig = nil
 	}
 
 	c.Server = &http.Server{
 		Addr:                         c.Server.Addr, // need to restart
 		Handler:                      c.Server.Handler,
 		DisableGeneralOptionsHandler: c.Server.DisableGeneralOptionsHandler,
-		TLSConfig:                    tlsConfig, // need to restart
+		TLSConfig:                    c.Server.TLSConfig, // need to restart
 		ReadTimeout:                  c.Server.ReadTimeout,
 		ReadHeaderTimeout:            c.Server.ReadHeaderTimeout,
 		WriteTimeout:                 c.Server.WriteTimeout,
