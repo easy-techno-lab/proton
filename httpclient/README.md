@@ -23,28 +23,27 @@ func main() {
 
 	clientJSON := httpclient.New(cdrJSON, http.DefaultClient)
 
-	URL, err := url.Parse("http://localhost:8080/example/")
-	if err != nil {
-		panic(err)
-	}
+	URL := "http://localhost:8080/example/"
 
 	params := make(url.Values)
 	params.Add("id", "1")
-	URL.RawQuery = params.Encode()
 
 	// To add additional data to the request, use the optional function f(*http.Request)
 	f := func(r *http.Request) {
 		r.Header.Set("Accept", "application/json")
+		r.URL.RawQuery = params.Encode()
 	}
 
-	var resp *http.Response
-	if resp, err = clientJSON.Request(context.TODO(), http.MethodGet, URL.String(), nil, f); err != nil {
+	resp, err := clientJSON.Request(context.TODO(), http.MethodGet, URL, nil, f)
+	if err != nil {
 		panic(err)
 	}
 
 	defer logger.Closer(resp.Body)
 
-	res := &struct{}{}
+	res := &struct {
+		// some fields
+	}{}
 
 	if err = clientJSON.Decode(resp.Body, res); err != nil {
 		panic(err)
