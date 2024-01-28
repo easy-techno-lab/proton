@@ -119,10 +119,19 @@ func main() {
 
 	http.Handle("/example/", handlerFunc)
 
+	corsOpts := new(httpserver.CORSOptions)
+
+	corsOpts.AllowOrigins = []string{"*"}
+	corsOpts.AllowMethods = []string{"OPTIONS", "GET", "POST", "PUT", "PATCH", "DELETE"}
+	corsOpts.AllowHeaders = []string{"Authorization", "Content-Type"}
+	corsOpts.MaxAge = 86400
+	corsOpts.AllowCredentials = false
+
 	handler := httpserver.MiddlewareSequencer(
 		http.DefaultServeMux,
 		httpserver.DumpHttp(logger.LevelTrace),
 		httpserver.Timer(logger.LevelInfo),
+		httpserver.AllowCORS(corsOpts),
 		httpserver.PanicCatcher,
 	)
 
