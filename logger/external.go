@@ -137,15 +137,20 @@ func FunctionInfo(skip int) (name, file string, line int, ok bool) {
 	}
 	name = runtime.FuncForPC(pc).Name()
 	// Truncate the path to the package.
-	name = name[strings.LastIndex(name, "/")+1:]
+	i := strings.LastIndex(name, "/")
+	name = name[i+1:]
 	// Truncate the package name.
-	name = name[strings.Index(name, ".")+1:]
-	// If a function is a method truncate the type name.
-	if name[0] == '(' {
-		name = name[strings.Index(name, ".")+1:]
+	i = strings.Index(name, ".")
+	name = name[i+1:]
+	// Remove generic designation.
+	name = strings.ReplaceAll(name, "[...]", "")
+	// If the string doesn't contain dots, the func name is found, return it.
+	if i = strings.Index(name, "."); i == -1 {
+		return
 	}
+	name = name[i+1:]
 	// If the function runs anonymous functions, truncate the name of the anonymous function.
-	if i := strings.Index(name, "."); i > 0 {
+	if i = strings.Index(name, "."); i > 0 {
 		name = name[:i]
 	}
 	return
