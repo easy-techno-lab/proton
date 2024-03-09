@@ -21,8 +21,9 @@ func (lvl Level) IsValid() bool {
 	switch lvl {
 	case LevelFatal, LevelError, LevelWarn, LevelInfo, LevelDebug, LevelTrace:
 		return true
+	default:
+		return false
 	}
-	return false
 }
 
 func (lvl Level) String() string {
