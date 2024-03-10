@@ -17,8 +17,9 @@ func (f Format) IsValid() bool {
 	switch f {
 	case FormatText, FormatJSON:
 		return true
+	default:
+		return false
 	}
-	return false
 }
 
 func (f Format) String() string {

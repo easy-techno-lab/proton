@@ -158,8 +158,9 @@ func (e encoder) color(dst []byte, lvl Level) []byte {
 		return enc.value(dst, "\x1b[92m")
 	case LevelDebug:
 		return enc.value(dst, "\x1b[94m")
+	default:
+		return enc.value(dst, "\x1b[96m")
 	}
-	return enc.value(dst, "\x1b[96m")
 }
 
 func (e encoder) routine(dst []byte) []byte {
