@@ -32,7 +32,7 @@ func main() {
 	// 2006/01/02 15:04:05.000 INFO [1] /../../main.go:17 main() Hello World!
 
 	logger.SetTimeFormat("2006-01-02 15:04:05")
-	logger.SetFormat(logger.FormatJSON)
+	logger.SetFormat(logger.FormatJson)
 	logger.SetAdditionalOut(file)
 	logger.SetLevel(logger.LevelInfo)
 	logger.SetFuncNamePrinting(false)

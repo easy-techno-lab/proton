@@ -69,7 +69,7 @@ func (p *printer) print(v ...any) {
 
 func (p *printer) mid(msg string) {
 	switch p.format {
-	case FormatJSON:
+	case FormatJson:
 		p.json(msg)
 	default:
 		p.text(msg)

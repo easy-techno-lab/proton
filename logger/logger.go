@@ -32,19 +32,17 @@ func (l *logger) setTimeFormat(format string) {
 }
 
 func (l *logger) setAdditionalOut(out io.Writer) {
-	if out != nil {
-		l.mu.Lock()
-		defer l.mu.Unlock()
-		l.out = out
-	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.out = out
 }
 
 func (l *logger) setFormat(f Format) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	switch f {
-	case FormatJSON:
-		l.format = FormatJSON
+	case FormatJson:
+		l.format = FormatJson
 	default:
 		l.format = FormatText
 	}

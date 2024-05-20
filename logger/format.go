@@ -10,12 +10,12 @@ type Format uint8
 const (
 	FormatUnknown Format = iota
 	FormatText
-	FormatJSON
+	FormatJson
 )
 
 func (f Format) IsValid() bool {
 	switch f {
-	case FormatText, FormatJSON:
+	case FormatText, FormatJson:
 		return true
 	default:
 		return false
@@ -26,7 +26,7 @@ func (f Format) String() string {
 	switch f {
 	case FormatText:
 		return "TEXT"
-	case FormatJSON:
+	case FormatJson:
 		return "JSON"
 	default:
 		return "UNKNOWN"
@@ -39,7 +39,7 @@ func ParseFormat(f string) (Format, error) {
 	case "text":
 		return FormatText, nil
 	case "json":
-		return FormatJSON, nil
+		return FormatJson, nil
 	default:
 		return FormatUnknown, fmt.Errorf("not a valid logger Format: %s", f)
 	}
