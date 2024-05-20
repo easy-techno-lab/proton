@@ -44,6 +44,16 @@ func TestClonePointer(t *testing.T) {
 			t.Fatalf("Values are not equal")
 		}
 	})
+
+	t.Run("Clone nil pointer", func(t *testing.T) {
+		pointedM := struct {
+			str *string
+		}{}
+		clonedStr := ClonePointer(pointedM.str)
+		if clonedStr != nil {
+			t.Fatalf("Cloned value should be nil")
+		}
+	})
 }
 
 func TestContainsDuplicates(t *testing.T) {

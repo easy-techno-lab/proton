@@ -1,6 +1,9 @@
 package utils
 
 func ClonePointer[T any](src *T) *T {
+	if src == nil {
+		return nil
+	}
 	dst := new(T)
 	*dst = *src
 	return dst

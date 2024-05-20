@@ -136,11 +136,11 @@ func (l *Loader) LoadFromFiles() ([]tls.Certificate, *x509.CertPool, error) {
 // LoadFromBytes loads []tls.Certificate from a pair of PEM encoded data.
 // To use this function you must specify CertPEMBlock, KeyPEMBlock in the Loader.
 func (l *Loader) LoadFromBytes() ([]tls.Certificate, *x509.CertPool, error) {
-	if l.CertPEMBlock == nil {
+	if len(l.CertPEMBlock) == 0 {
 		return nil, nil, CertPEMBlockIsEmpty
 	}
 
-	if l.KeyPEMBlock == nil {
+	if len(l.KeyPEMBlock) == 0 {
 		return nil, nil, KeyPEMBlockIsEmpty
 	}
 
