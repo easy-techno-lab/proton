@@ -10,7 +10,6 @@
 - [coder](https://github.com/easy-techno-lab/proton/blob/main/coder/README.md)
 - [httpclient](https://github.com/easy-techno-lab/proton/blob/main/httpclient/README.md)
 - [httpserver](https://github.com/easy-techno-lab/proton/blob/main/httpserver/README.md)
-- [logger](https://github.com/easy-techno-lab/proton/blob/main/logger/README.md)
 
 ## Installation
 

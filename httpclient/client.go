@@ -30,7 +30,7 @@ func (c *protoClient) Request(ctx context.Context, method, url string, body any,
 	var reader io.Reader
 	if body != nil {
 		buf := new(bytes.Buffer)
-		if err := c.Encode(buf, body); err != nil {
+		if err := c.Encode(ctx, buf, body); err != nil {
 			return nil, err
 		}
 		reader = buf

@@ -2,18 +2,14 @@ package coder_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"reflect"
 	"testing"
 
 	"github.com/easy-techno-lab/proton/coder"
-	"github.com/easy-techno-lab/proton/logger"
 )
-
-func init() {
-	logger.SetLevel(logger.LevelFatal)
-}
 
 func equal(t *testing.T, exp, got any) {
 	if !reflect.DeepEqual(exp, got) {
@@ -26,7 +22,7 @@ type testStruct struct {
 }
 
 func TestEncoder_Encode(t *testing.T) {
-	encoder := coder.NewEncoder(json.Marshal)
+	encoder := coder.NewEncoder(json.Marshal, false)
 	var tests = []struct {
 		name   string
 		input  *testStruct
@@ -43,7 +39,7 @@ func TestEncoder_Encode(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			w := &bytes.Buffer{}
-			err := encoder.Encode(w, test.input)
+			err := encoder.Encode(context.Background(), w, test.input)
 			if test.err != nil {
 				equal(t, test.err.Error(), err.Error())
 			} else {
@@ -55,7 +51,7 @@ func TestEncoder_Encode(t *testing.T) {
 }
 
 func TestDecoder_Decode(t *testing.T) {
-	decoder := coder.NewDecoder(json.Unmarshal)
+	decoder := coder.NewDecoder(json.Unmarshal, false)
 	var tests = []struct {
 		name   string
 		input  []byte
@@ -81,7 +77,7 @@ func TestDecoder_Decode(t *testing.T) {
 
 			v := new(testStruct)
 
-			err := decoder.Decode(r, v)
+			err := decoder.Decode(context.Background(), r, v)
 			if test.err != nil {
 				equal(t, test.err.Error(), err.Error())
 			} else {

@@ -15,11 +15,11 @@ import (
 
 	"github.com/easy-techno-lab/proton/coder"
 	"github.com/easy-techno-lab/proton/httpclient"
-	"github.com/easy-techno-lab/proton/logger"
+	"github.com/easy-techno-lab/proton/utils/log"
 )
 
 func main() {
-	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
+	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal, false)
 
 	clientJSON := httpclient.New(cdrJSON, http.DefaultClient)
 
@@ -34,18 +34,20 @@ func main() {
 		r.URL.RawQuery = params.Encode()
 	}
 
-	resp, err := clientJSON.Request(context.TODO(), http.MethodGet, URL, nil, f)
+		ctx := context.Background()
+	
+	resp, err := clientJSON.Request(ctx, http.MethodGet, URL, nil, f)
 	if err != nil {
 		panic(err)
 	}
 
-	defer logger.Closer(resp.Body)
+	defer log.Closer(ctx, resp.Body)
 
 	res := &struct {
 		// some fields
 	}{}
 
-	if err = clientJSON.Decode(resp.Body, res); err != nil {
+	if err = clientJSON.Decode(ctx, resp.Body, res); err != nil {
 		panic(err)
 	}
 }
@@ -62,11 +64,11 @@ import (
 
 	"github.com/easy-techno-lab/proton/coder"
 	"github.com/easy-techno-lab/proton/httpclient"
-	"github.com/easy-techno-lab/proton/logger"
+	"github.com/easy-techno-lab/proton/utils/log"
 )
 
 func main() {
-	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
+	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal, false)
 
 	clientJSON := httpclient.New(cdrJSON, http.DefaultClient)
 
@@ -76,18 +78,20 @@ func main() {
 		ID int `json:"id"`
 	}{ID: 1}
 
-	resp, err := clientJSON.Request(context.TODO(), http.MethodPost, URL, req, nil)
+	ctx := context.Background()
+	
+	resp, err := clientJSON.Request(ctx, http.MethodPost, URL, req, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	defer logger.Closer(resp.Body)
+	defer log.Closer(ctx, resp.Body)
 
 	res := &struct {
 		// some fields
 	}{}
 
-	if err = clientJSON.Decode(resp.Body, res); err != nil {
+	if err = clientJSON.Decode(ctx, resp.Body, res); err != nil {
 		panic(err)
 	}
 }
@@ -102,17 +106,18 @@ func main() {
 package main
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/easy-techno-lab/proton/httpclient"
-	"github.com/easy-techno-lab/proton/logger"
 )
 
 func main() {
 	transport := httpclient.RoundTripperSequencer(
 		http.DefaultTransport,
-		httpclient.DumpHttp(logger.LevelTrace),
-		httpclient.Timer(logger.LevelInfo),
+		httpclient.DumpHttp(slog.LevelDebug),
+		httpclient.Timer(slog.LevelInfo),
+		httpclient.Tracer,
 		httpclient.PanicCatcher,
 	)
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -11,12 +12,7 @@ import (
 
 	"github.com/easy-techno-lab/proton/coder"
 	"github.com/easy-techno-lab/proton/httpserver"
-	"github.com/easy-techno-lab/proton/logger"
 )
-
-func init() {
-	logger.SetLevel(logger.LevelFatal)
-}
 
 func equal(t *testing.T, exp, got any) {
 	if !reflect.DeepEqual(exp, got) {
@@ -25,8 +21,8 @@ func equal(t *testing.T, exp, got any) {
 }
 
 var (
-	cdrJSON = coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
-	cdr     = coder.NewCoder("", json.Marshal, json.Unmarshal)
+	cdrJSON = coder.NewCoder("application/json", json.Marshal, json.Unmarshal, false)
+	cdr     = coder.NewCoder("", json.Marshal, json.Unmarshal, false)
 )
 
 type serverTestStruct struct {
@@ -89,18 +85,20 @@ func TestProtoFormatter_WriteResponse(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			fmtJSON := httpserver.NewFormatter(cdrJSON)
 
-			srv := httptest.NewServer(httpserver.DumpHttp(logger.LevelTrace)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			srv := httptest.NewServer(httpserver.DumpHttp(slog.LevelDebug)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				equal(t, r.URL.String(), "/path")
+
+				ctx := r.Context()
 
 				if test.input != nil {
 					input := &serverTestStruct{}
 
-					err := fmtJSON.Decode(r.Body, input)
+					err := fmtJSON.Decode(ctx, r.Body, input)
 					equal(t, nil, err)
 					equal(t, test.input, input)
 				}
 
-				fmtJSON.WriteResponse(w, http.StatusOK, test.output)
+				fmtJSON.WriteResponse(ctx, w, http.StatusOK, test.output)
 			})))
 			defer srv.Close()
 
@@ -164,7 +162,7 @@ func TestProtoFormatter_ResponseContentType(t *testing.T) {
 					w.Header().Set(coder.ContentType, test.customContentType)
 				}
 
-				fmtJSON.WriteResponse(w, http.StatusOK, test.output)
+				fmtJSON.WriteResponse(r.Context(), w, http.StatusOK, test.output)
 			}))
 			defer srv.Close()
 

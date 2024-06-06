@@ -1,12 +1,21 @@
 package httpclient
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 	"runtime/debug"
 	"time"
 
-	"github.com/easy-techno-lab/proton/logger"
+	"github.com/easy-techno-lab/proton/utils/log"
+	"github.com/easy-techno-lab/proton/utils/sgen"
 )
+
+func init() {
+	id.Configure("", sgen.UpLetters.Append(sgen.LowLetters, sgen.Nums), 12)
+}
+
+var id sgen.RandomString
 
 // The RoundTripper type is an adapter to allow the use of ordinary functions as HTTP round trippers.
 // If f is a function with the appropriate signature, Func(f) is a RoundTripper that calls f.
@@ -25,13 +34,27 @@ func RoundTripperSequencer(baseRoundTripper http.RoundTripper, rts ...func(http.
 	return baseRoundTripper
 }
 
+// Tracer adds trace ID to the request context.
+func Tracer(next http.RoundTripper) http.RoundTripper {
+	return RoundTripper(func(r *http.Request) (*http.Response, error) {
+		ctx := context.WithValue(r.Context(), log.TraceCtxKey, id.Generate())
+		return next.RoundTrip(r.Clone(ctx))
+	})
+}
+
 // Timer measures the time taken by http.RoundTripper.
-func Timer(logLevel logger.Level) func(http.RoundTripper) http.RoundTripper {
+func Timer(level slog.Level) func(http.RoundTripper) http.RoundTripper {
 	return func(next http.RoundTripper) http.RoundTripper {
 		return RoundTripper(func(r *http.Request) (*http.Response, error) {
-			if logger.InLevel(logLevel) {
+			ctx := r.Context()
+			if slog.Default().Enabled(ctx, level) {
 				defer func(start time.Time) {
-					logLevel.Printf("%s %s %s", r.Method, r.RequestURI, time.Since(start))
+					slog.Log(ctx, level, "finished",
+						slog.Group("request",
+							slog.String("method", r.Method),
+							slog.String("url", r.RequestURI),
+						),
+						slog.String("duration", time.Since(start).String()))
 				}(time.Now())
 			}
 			return next.RoundTrip(r)
@@ -44,8 +67,8 @@ func PanicCatcher(next http.RoundTripper) http.RoundTripper {
 	return RoundTripper(func(r *http.Request) (*http.Response, error) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				if logger.InLevel(logger.LevelError) {
-					logger.Errorf("%s\n%s", rec, debug.Stack())
+				if slog.Default().Enabled(r.Context(), slog.LevelError) {
+					slog.Error("panic", "recover", rec, "stack", debug.Stack())
 				}
 			}
 		}()
@@ -54,20 +77,21 @@ func PanicCatcher(next http.RoundTripper) http.RoundTripper {
 }
 
 // DumpHttp dumps the HTTP request and response, and prints out with logFunc.
-func DumpHttp(logLevel logger.Level) func(http.RoundTripper) http.RoundTripper {
+func DumpHttp(level slog.Level) func(http.RoundTripper) http.RoundTripper {
 	return func(next http.RoundTripper) http.RoundTripper {
 		return RoundTripper(func(r *http.Request) (*http.Response, error) {
-			if logger.InLevel(logLevel) {
-				logger.DumpHttpRequest(r, logLevel)
+			ctx := r.Context()
+			if slog.Default().Enabled(ctx, level) {
+				log.DumpHttpRequest(ctx, r, level)
 
-				resp, err := next.RoundTrip(r)
+				response, err := next.RoundTrip(r)
 				if err != nil {
 					return nil, err
 				}
 
-				logger.DumpHttpResponse(resp, logLevel)
+				log.DumpHttpResponse(ctx, response, level)
 
-				return resp, nil
+				return response, nil
 			}
 			return next.RoundTrip(r)
 		})

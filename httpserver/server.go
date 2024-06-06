@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,12 +13,11 @@ import (
 	"time"
 
 	"github.com/easy-techno-lab/proton/coder"
-	"github.com/easy-techno-lab/proton/logger"
 )
 
 type Formatter interface {
 	coder.Coder
-	WriteResponse(w http.ResponseWriter, statusCode int, v any)
+	WriteResponse(ctx context.Context, w http.ResponseWriter, statusCode int, v any)
 }
 
 // NewFormatter returns a new Formatter.
@@ -30,7 +30,7 @@ type protoFormatter struct {
 }
 
 // WriteResponse encodes the value pointed to by v and writes it and statusCode to the stream.
-func (f *protoFormatter) WriteResponse(w http.ResponseWriter, statusCode int, v any) {
+func (f *protoFormatter) WriteResponse(ctx context.Context, w http.ResponseWriter, statusCode int, v any) {
 	if v == nil {
 		w.WriteHeader(statusCode)
 		return
@@ -40,9 +40,9 @@ func (f *protoFormatter) WriteResponse(w http.ResponseWriter, statusCode int, v 
 		w.Header().Set(coder.ContentType, f.ContentType())
 	}
 	w.WriteHeader(statusCode)
-	if err := f.Encode(w, v); err != nil {
+	if err := f.Encode(ctx, w, v); err != nil {
+		slog.ErrorContext(ctx, "encode response", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		logger.Error("Can't encode response: ", err)
 	}
 }
 
@@ -68,12 +68,13 @@ func (c *Controller) Start() (err error) {
 			err = nil
 		}
 		if !c.restart.Load() {
+			slog.Info("HTTP server is shutdown")
 			return
 		} else if err != nil {
-			logger.Error(err)
+			slog.Error(err.Error())
 		}
 
-		logger.Info("Server is restarting")
+		slog.Info("HTTP server is restarting")
 
 		c.clone()
 		c.restart.Store(false)
@@ -104,7 +105,7 @@ func (c *Controller) Shutdown() {
 	defer cancelWithTimeout()
 
 	if err := c.Server.Shutdown(ctx); err != nil {
-		logger.Error("Shutdown server: ", err)
+		slog.Error(fmt.Sprintf("HTTP server shutdown: %s", err))
 	}
 }
 
@@ -117,25 +118,22 @@ func (c *Controller) start() error {
 		close(c.sigint)
 	}()
 
+	secure := c.Server.TLSConfig != nil
+
 	go func() {
 		<-c.sigint
-
 		c.Shutdown()
-
-		logger.Info("Server is shutdown")
 	}()
 
 	c.isRan.Store(true)
 	defer c.isRan.Store(false)
 
-	if c.Server.TLSConfig != nil {
-		logger.Info("HTTPS server listening on ", c.Server.Addr)
+	slog.Info("HTTP server serving", "secure", secure, "address", c.Server.Addr)
 
+	if secure {
 		err := c.Server.ListenAndServeTLS("", "")
-		return fmt.Errorf("HTTPS server ListenAndServeTLS: %w", err)
+		return fmt.Errorf("HTTP server ListenAndServeTLS: %w", err)
 	} else {
-		logger.Info("HTTP server listening on ", c.Server.Addr)
-
 		err := c.Server.ListenAndServe()
 		return fmt.Errorf("HTTP server ListenAndServe: %w", err)
 	}
