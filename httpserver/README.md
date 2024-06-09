@@ -16,17 +16,19 @@ import (
 )
 
 func main() {
-	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
+	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal, false)
 
 	fmtJSON := httpserver.NewFormatter(cdrJSON)
 
 	handlerFunc := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
 		if r.Method != http.MethodGet {
 			req := &struct {
 				// some fields
 			}{}
 
-			if err := fmtJSON.Decode(r.Body, req); err != nil {
+			if err := fmtJSON.Decode(ctx, r.Body, req); err != nil {
 				panic(err)
 			}
 		}
@@ -35,7 +37,7 @@ func main() {
 			ID int `json:"id"`
 		}{ID: 1}
 
-		fmtJSON.WriteResponse(w, http.StatusOK, res)
+		fmtJSON.WriteResponse(ctx, w, http.StatusOK, res)
 	})
 
 	http.Handle("/example/", handlerFunc)
@@ -51,7 +53,8 @@ func main() {
 
 - The default is to use the `Content-Type` set in
   the [coder](https://github.com/easy-techno-lab/proton/blob/main/coder/README.md).
-- If you don't set the `Content-Type` in the [coder](https://github.com/easy-techno-lab/proton/blob/main/coder/README.md), it
+- If you don't set the `Content-Type` in
+  the [coder](https://github.com/easy-techno-lab/proton/blob/main/coder/README.md), it
   will be set automatically by the [net/http](https://pkg.go.dev/net/http) package.
 - If you need to set a different `Content-Type` you must set it before calling `WriteResponse`.
 
@@ -104,10 +107,10 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/easy-techno-lab/proton/httpserver"
-	"github.com/easy-techno-lab/proton/logger"
 )
 
 func main() {
@@ -129,8 +132,9 @@ func main() {
 
 	handler := httpserver.MiddlewareSequencer(
 		http.DefaultServeMux,
-		httpserver.DumpHttp(logger.LevelTrace),
-		httpserver.Timer(logger.LevelInfo),
+		httpserver.DumpHttp(slog.LevelDebug),
+		httpserver.Timer(slog.LevelInfo),
+		httpserver.Tracer,
 		httpserver.AllowCORS(corsOpts),
 		httpserver.PanicCatcher,
 	)

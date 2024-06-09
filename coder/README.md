@@ -1,6 +1,6 @@
 # coder
 
-### The `coder` package implements three interfaces with debug [logging](https://github.com/easy-techno-lab/proton/blob/main/logger/README.md):
+### The `coder` package implements three interfaces with debug logging:
 
 - *Encoder* encodes and writes values to an output stream.
 - *Decoder* reads and decodes values from an input stream.
@@ -13,6 +13,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -20,7 +21,9 @@ import (
 )
 
 func main() {
-	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
+	ctx := context.Background()
+
+	cdrJSON := coder.NewCoder("application/json", json.Marshal, json.Unmarshal, false)
 
 	var buf bytes.Buffer
 
@@ -28,7 +31,7 @@ func main() {
 		A string `json:"a"`
 	}{A: "AAA"}
 
-	if err := cdrJSON.Encode(&buf, in); err != nil {
+	if err := cdrJSON.Encode(ctx, &buf, in); err != nil {
 		panic(err)
 	}
 
@@ -39,7 +42,7 @@ func main() {
 		A string `json:"a"`
 	}{}
 
-	if err := cdrJSON.Decode(&buf, out); err != nil {
+	if err := cdrJSON.Decode(ctx, &buf, out); err != nil {
 		panic(err)
 	}
 

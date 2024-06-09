@@ -10,12 +10,7 @@ import (
 
 	"github.com/easy-techno-lab/proton/coder"
 	"github.com/easy-techno-lab/proton/httpclient"
-	"github.com/easy-techno-lab/proton/logger"
 )
-
-func init() {
-	logger.SetLevel(logger.LevelFatal)
-}
 
 func equal(t *testing.T, exp, got any) {
 	if !reflect.DeepEqual(exp, got) {
@@ -23,7 +18,7 @@ func equal(t *testing.T, exp, got any) {
 	}
 }
 
-var cdrJSON = coder.NewCoder("application/json", json.Marshal, json.Unmarshal)
+var cdrJSON = coder.NewCoder("application/json", json.Marshal, json.Unmarshal, false)
 
 type serverTestStruct struct {
 	Field int
@@ -78,14 +73,16 @@ func TestProtoClient_Request(t *testing.T) {
 
 			clt := httpclient.New(cdrJSON, srv.Client())
 
-			resp, err := clt.Request(context.Background(), test.method, srv.URL+"/path", test.input, nil)
+			ctx := context.Background()
+
+			resp, err := clt.Request(ctx, test.method, srv.URL+"/path", test.input, nil)
 			equal(t, nil, err)
 
 			defer func() { _ = resp.Body.Close() }()
 
 			output := &clientTestStruct{}
 
-			err = clt.Decode(resp.Body, output)
+			err = clt.Decode(ctx, resp.Body, output)
 			equal(t, nil, err)
 			equal(t, test.output, output)
 		})

@@ -1,40 +1,53 @@
 package coder
 
 import (
+	"context"
+	"fmt"
 	"io"
-
-	"github.com/easy-techno-lab/proton/logger"
+	"log/slog"
 )
 
 const ContentType = "Content-Type"
 
 // An Encoder encodes and writes values to an output stream.
 type Encoder interface {
-	Encode(w io.Writer, v any) error
+	Encode(ctx context.Context, w io.Writer, v any) error
 }
 
 type encoder struct {
-	f func(v any) ([]byte, error)
+	f   func(v any) ([]byte, error)
+	raw bool
 }
 
 // NewEncoder returns a new Encoder that writes to w.
-func NewEncoder(marshal func(v any) ([]byte, error)) Encoder {
-	return &encoder{f: marshal}
+// If 'raw' is true, the debug log will print raw bytes.
+func NewEncoder(marshal func(v any) ([]byte, error), raw bool) Encoder {
+	return &encoder{f: marshal, raw: raw}
 }
 
 // Encode encodes the value pointed to by v and writes it to the stream.
 // It will panic if encoder function not set.
-func (e *encoder) Encode(w io.Writer, v any) error {
-	logger.Debugf("Encoder input: %#v", v)
+func (e *encoder) Encode(ctx context.Context, w io.Writer, v any) error {
+	enabled := slog.Default().Enabled(ctx, slog.LevelDebug)
+
+	if enabled {
+		slog.DebugContext(ctx, "encoder input", "value", v)
+	}
 
 	p, err := e.f(v)
 	if err != nil {
 		return err
 	}
 
-	logger.Debugf("Encoder output: %s", p)
-
-	logger.Tracef("Encoder output: % x, len: %d", p, len(p))
+	if enabled {
+		var attr slog.Attr
+		if e.raw {
+			attr = slog.String("bytes", fmt.Sprintf("% x", p))
+		} else {
+			attr = slog.String("value", string(p))
+		}
+		slog.DebugContext(ctx, "encoder output", attr, "len", len(p))
+	}
 
 	if _, err = w.Write(p); err != nil {
 		return err
@@ -45,35 +58,47 @@ func (e *encoder) Encode(w io.Writer, v any) error {
 
 // A Decoder reads and decodes values from an input stream.
 type Decoder interface {
-	Decode(r io.Reader, v any) error
+	Decode(ctx context.Context, r io.Reader, v any) error
 }
 
 type decoder struct {
-	f func(data []byte, v any) error
+	f   func(data []byte, v any) error
+	raw bool
 }
 
 // NewDecoder returns a new Decoder that reads from r.
-func NewDecoder(unmarshal func(data []byte, v any) error) Decoder {
-	return &decoder{f: unmarshal}
+// If 'raw' is true, the debug log will print raw bytes.
+func NewDecoder(unmarshal func(data []byte, v any) error, raw bool) Decoder {
+	return &decoder{f: unmarshal, raw: raw}
 }
 
 // Decode reads the next encoded value from its input and stores it in the value pointed to by v.
 // It will panic if decoder function not set.
-func (d *decoder) Decode(r io.Reader, v any) error {
+func (d *decoder) Decode(ctx context.Context, r io.Reader, v any) error {
 	p, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}
 
-	logger.Tracef("Decoder input: % x, len: %d", p, len(p))
+	enabled := slog.Default().Enabled(ctx, slog.LevelDebug)
 
-	logger.Debugf("Decoder input: %s", p)
+	if enabled {
+		var attr slog.Attr
+		if d.raw {
+			attr = slog.String("bytes", fmt.Sprintf("% x", p))
+		} else {
+			attr = slog.String("value", string(p))
+		}
+		slog.DebugContext(ctx, "decoder input", attr, "len", len(p))
+	}
 
 	if err = d.f(p, v); err != nil {
 		return err
 	}
 
-	logger.Debugf("Decoder output: %#v", v)
+	if enabled {
+		slog.DebugContext(ctx, "decoder output", "value", v)
+	}
 
 	return nil
 }
@@ -92,8 +117,9 @@ type coder struct {
 }
 
 // NewCoder returns a new Coder.
-func NewCoder(contentType string, marshal func(v any) ([]byte, error), unmarshal func(data []byte, v any) error) Coder {
-	return &coder{t: contentType, Encoder: NewEncoder(marshal), Decoder: NewDecoder(unmarshal)}
+// If 'raw' is true, the debug log will print raw bytes.
+func NewCoder(contentType string, marshal func(v any) ([]byte, error), unmarshal func(data []byte, v any) error, raw bool) Coder {
+	return &coder{t: contentType, Encoder: NewEncoder(marshal, raw), Decoder: NewDecoder(unmarshal, raw)}
 }
 
 // ContentType returns a string value representing the Coder type.
