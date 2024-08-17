@@ -52,7 +52,7 @@ func Timer(level slog.Level) func(http.RoundTripper) http.RoundTripper {
 					slog.Log(ctx, level, "finished",
 						slog.Group("request",
 							slog.String("method", r.Method),
-							slog.String("url", r.RequestURI),
+							slog.String("url", r.URL.String()),
 						),
 						slog.String("duration", time.Since(start).String()))
 				}(time.Now())
